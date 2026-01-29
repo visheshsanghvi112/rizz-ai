@@ -1,0 +1,5 @@
+{
+  "name": "AI",
+  "description": "An intelligent AI dating assistant that analyzes chats and screenshots to suggest perfect flirty, romantic, or funny replies using Gemini models.",
+  "requestFramePermissions": []
+}
