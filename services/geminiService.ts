@@ -38,26 +38,26 @@ export const generateRizz = async (
   tone: ToneSelection,
   iteration: number = 0
 ): Promise<AnalysisResult> => {
-  
-  // Default to Gemini 3 Flash
-  let modelName = 'gemini-3-flash-preview';
+
+  // Default to Gemini 2.0 Flash
+  let modelName = 'gemini-2.0-flash';
   let tools: any[] = [];
   let thinkingConfig: any = undefined;
-  
+
   // Configuration based on Mode
   if (mode === ModelMode.DEEP) {
-    modelName = 'gemini-3-pro-preview';
-    thinkingConfig = { thinkingBudget: 2048 }; 
+    modelName = 'gemini-2.5-pro';
+    thinkingConfig = { thinkingBudget: 2048 };
   } else if (mode === ModelMode.SEARCH) {
     // Switch to Pro for better tool use and reasoning
-    modelName = 'gemini-3-pro-preview'; 
+    modelName = 'gemini-2.5-pro';
     tools = [{ googleSearch: {} }];
   } else if (mode === ModelMode.FAST) {
-    modelName = 'gemini-3-flash-preview';
+    modelName = 'gemini-2.0-flash';
   }
 
   const parts: any[] = [];
-  
+
   if (imageBase64) {
     parts.push({
       inlineData: {
@@ -70,16 +70,16 @@ export const generateRizz = async (
 
   let toneInstruction = "";
   if (mode === ModelMode.SEARCH) {
-      toneInstruction = "You are a world-class Dating Concierge and Event Planner. Your goal is to create IMPRESSIVE, SPECIFIC date ideas based on the user's request. Use Google Search to find real, currently open places or events if location is implied.";
+    toneInstruction = "You are a world-class Dating Concierge and Event Planner. Your goal is to create IMPRESSIVE, SPECIFIC date ideas based on the user's request. Use Google Search to find real, currently open places or events if location is implied.";
   } else {
-      if (iteration === 0) {
-        toneInstruction = "Provide 3 initial options: 1. Casual/Low-key (safe), 2. Playful (medium risk), 3. Direct (higher risk). Keep them short.";
-      } else {
-        toneInstruction = "The user wants MORE options. Go deeper, wittier, or more specific. Increase the 'Rizz' level. Give 3 new unique options.";
-      }
-      if (tone !== 'Mixed') {
-         toneInstruction += ` Focus specifically on the ${tone} vibe.`;
-      }
+    if (iteration === 0) {
+      toneInstruction = "Provide 3 initial options: 1. Casual/Low-key (safe), 2. Playful (medium risk), 3. Direct (higher risk). Keep them short.";
+    } else {
+      toneInstruction = "The user wants MORE options. Go deeper, wittier, or more specific. Increase the 'Rizz' level. Give 3 new unique options.";
+    }
+    if (tone !== 'Mixed') {
+      toneInstruction += ` Focus specifically on the ${tone} vibe.`;
+    }
   }
 
   const systemInstruction = `
@@ -125,38 +125,38 @@ export const generateRizz = async (
 
     // Special handling for Search Mode results
     if (mode === ModelMode.SEARCH) {
-       const text = response.text || "";
-       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-       const links = groundingChunks.map((c: any) => c.web ? { title: c.web.title, url: c.web.uri } : null).filter(Boolean);
+      const text = response.text || "";
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const links = groundingChunks.map((c: any) => c.web ? { title: c.web.title, url: c.web.uri } : null).filter(Boolean);
 
-       // 1. Try to find JSON in the text
-       try {
-         const cleanJson = text.replace(/```json|```/g, "").trim();
-         const firstBrace = cleanJson.indexOf('{');
-         const lastBrace = cleanJson.lastIndexOf('}');
-         
-         if (firstBrace !== -1 && lastBrace !== -1) {
-            const parsed = JSON.parse(cleanJson.substring(firstBrace, lastBrace + 1));
-            // Inject links if valid
-            if (parsed.suggestions) return { ...parsed, groundingLinks: links };
-         }
-       } catch (e) {
-           // JSON parse failed, proceed to fallback
-       }
+      // 1. Try to find JSON in the text
+      try {
+        const cleanJson = text.replace(/```json|```/g, "").trim();
+        const firstBrace = cleanJson.indexOf('{');
+        const lastBrace = cleanJson.lastIndexOf('}');
 
-       // 2. Fallback: Formatting raw text into a nice card
-       // If the model returned a wall of text, we try to make it look like a plan.
-       return {
-         summary: "Date Plan Results",
-         suggestions: [
-             { 
-                 tone: "Date Plan", 
-                 reply: text, // ResultCard will handle markdown/newlines
-                 explanation: "Generated based on real-time search data." 
-             }
-         ],
-         groundingLinks: links
-       };
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          const parsed = JSON.parse(cleanJson.substring(firstBrace, lastBrace + 1));
+          // Inject links if valid
+          if (parsed.suggestions) return { ...parsed, groundingLinks: links };
+        }
+      } catch (e) {
+        // JSON parse failed, proceed to fallback
+      }
+
+      // 2. Fallback: Formatting raw text into a nice card
+      // If the model returned a wall of text, we try to make it look like a plan.
+      return {
+        summary: "Date Plan Results",
+        suggestions: [
+          {
+            tone: "Date Plan",
+            reply: text, // ResultCard will handle markdown/newlines
+            explanation: "Generated based on real-time search data."
+          }
+        ],
+        groundingLinks: links
+      };
     }
 
     // Standard Rizz Generation Parsing
@@ -171,12 +171,12 @@ export const generateRizz = async (
     }
     // Fallback error result to prevent app crash
     return {
-        summary: "Error generating response",
-        suggestions: [{
-            tone: "System Error",
-            reply: "I had a brain freeze. Try asking again?",
-            explanation: "API request failed."
-        }]
+      summary: "Error generating response",
+      suggestions: [{
+        tone: "System Error",
+        reply: "I had a brain freeze. Try asking again?",
+        explanation: "API request failed."
+      }]
     };
   }
 };
