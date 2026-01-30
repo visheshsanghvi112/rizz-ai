@@ -122,8 +122,8 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-pink-500/30 transition-colors duration-300 ${theme === 'dark'
-        ? 'bg-[#020617] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.1),rgba(255,255,255,0))] text-slate-100'
-        : 'bg-gradient-to-br from-pink-50 via-white to-purple-50 text-slate-900'
+      ? 'bg-[#020617] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.1),rgba(255,255,255,0))] text-slate-100'
+      : 'bg-gradient-to-br from-pink-50 via-white to-purple-50 text-slate-900'
       }`}>
       <Header theme={theme} toggleTheme={toggleTheme} />
 
@@ -146,10 +146,11 @@ const App: React.FC = () => {
 
         <VibeSelector selectedTone={tone} setTone={setTone} />
 
-        <InputArea onSend={handleSend} isLoading={isLoading} />
+        <InputArea onSend={handleSend} isLoading={isLoading} theme={theme} />
 
         {isLoading && !result && (
-          <div className="flex flex-col items-center justify-center py-16 animate-pulse text-slate-500">
+          <div className={`flex flex-col items-center justify-center py-16 animate-pulse ${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'
+            }`}>
             <Loader2 className="w-12 h-12 animate-spin mb-4 text-pink-500" />
             <p className="text-sm font-medium tracking-widest uppercase animate-pulse">
               {mode === ModelMode.DEEP ? 'Analyzing Vibe...' : 'Cooking Rizz...'}
@@ -158,7 +159,10 @@ const App: React.FC = () => {
         )}
 
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-center text-sm">
+          <div className={`p-4 border rounded-xl text-center text-sm font-medium ${theme === 'dark'
+            ? 'bg-red-500/10 border-red-500/20 text-red-400'
+            : 'bg-red-50 border-red-200 text-red-600'
+            }`}>
             {error}
           </div>
         )}
@@ -166,12 +170,15 @@ const App: React.FC = () => {
         {result && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-4 my-2">
-              <div className="h-[1px] bg-slate-800 flex-1"></div>
-              <span className="text-xs font-medium text-slate-600 uppercase tracking-widest">Results</span>
-              <div className="h-[1px] bg-slate-800 flex-1"></div>
+              <div className={`h-[1px] flex-1 ${theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200'
+                }`}></div>
+              <span className={`text-xs font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-slate-600' : 'text-slate-500'
+                }`}>Results</span>
+              <div className={`h-[1px] flex-1 ${theme === 'dark' ? 'bg-slate-800' : 'bg-gray-200'
+                }`}></div>
             </div>
 
-            <ResultCard result={result} />
+            <ResultCard result={result} theme={theme} />
 
             <div className="flex justify-center">
               <button
