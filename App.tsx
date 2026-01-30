@@ -9,11 +9,13 @@ import HistorySection from './components/HistorySection';
 import { generateRizz } from './services/geminiService';
 import { AnalysisResult, ModelMode, ToneSelection, HistoryItem } from './types';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { useTheme } from './hooks/useTheme';
 
 const MAX_VISIBLE_SUGGESTIONS = 6;
 const HISTORY_KEY = 'rizz_history_v1';
 
 const App: React.FC = () => {
+  const { theme, toggleTheme } = useTheme();
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<ModelMode>(ModelMode.FAST);
@@ -119,8 +121,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#020617] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.1),rgba(255,255,255,0))] text-slate-100 selection:bg-pink-500/30">
-      <Header />
+    <div className={`min-h-screen flex flex-col selection:bg-pink-500/30 transition-colors duration-300 ${theme === 'dark'
+        ? 'bg-[#020617] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.1),rgba(255,255,255,0))] text-slate-100'
+        : 'bg-gradient-to-br from-pink-50 via-white to-purple-50 text-slate-900'
+      }`}>
+      <Header theme={theme} toggleTheme={toggleTheme} />
 
       <main className="flex-grow max-w-3xl mx-auto px-4 w-full flex flex-col gap-6 pb-8">
 
