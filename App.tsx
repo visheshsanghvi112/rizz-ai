@@ -16,13 +16,13 @@ const HISTORY_KEY = 'rizz_history_v1';
 const App: React.FC = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<ModelMode>(ModelMode.DEEP);
+  const [mode, setMode] = useState<ModelMode>(ModelMode.FAST);
   const [tone, setTone] = useState<ToneSelection>('Mixed');
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  
+
   // Track context for "Load More"
-  const [lastPrompt, setLastPrompt] = useState<{text: string, image?: string} | null>(null);
+  const [lastPrompt, setLastPrompt] = useState<{ text: string, image?: string } | null>(null);
   const [iteration, setIteration] = useState(0);
 
   // Load History
@@ -58,7 +58,7 @@ const App: React.FC = () => {
     try {
       const data = await generateRizz(text, imageBase64, mode, tone, 0);
       setResult(data);
-      
+
       // Save to history
       saveToHistory({
         id: Date.now().toString(),
@@ -79,20 +79,20 @@ const App: React.FC = () => {
 
   const handleLoadMore = async () => {
     if (!lastPrompt || !result) return;
-    
+
     setIsLoading(true);
     const nextIter = iteration + 1;
     setIteration(nextIter);
 
     try {
       const newData = await generateRizz(lastPrompt.text, lastPrompt.image, mode, tone, nextIter);
-      
+
       setResult(prev => {
         if (!prev) return newData;
-        
+
         // Rolling window
         const allSuggestions = [...prev.suggestions, ...newData.suggestions];
-        const rollingSuggestions = allSuggestions.length > MAX_VISIBLE_SUGGESTIONS 
+        const rollingSuggestions = allSuggestions.length > MAX_VISIBLE_SUGGESTIONS
           ? allSuggestions.slice(allSuggestions.length - MAX_VISIBLE_SUGGESTIONS)
           : allSuggestions;
 
@@ -123,13 +123,13 @@ const App: React.FC = () => {
       <Header />
 
       <main className="flex-grow max-w-3xl mx-auto px-4 w-full flex flex-col gap-6 pb-8">
-        
+
         <div className="text-center space-y-3 mb-2 pt-4">
           <h2 className="text-2xl md:text-3xl font-light text-slate-200 tracking-tight">
-             Crush your reply game.
+            Crush your reply game.
           </h2>
           <p className="text-slate-500 text-sm md:text-base max-w-md mx-auto leading-relaxed">
-            Upload chat screenshots or explain the context. <br className="hidden sm:block"/>
+            Upload chat screenshots or explain the context. <br className="hidden sm:block" />
             Powered by <span className="text-blue-400 font-medium">Gemini 3 Pro</span> & <span className="text-yellow-400 font-medium">Flash</span>
           </p>
         </div>
@@ -161,13 +161,13 @@ const App: React.FC = () => {
         {result && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-4 my-2">
-               <div className="h-[1px] bg-slate-800 flex-1"></div>
-               <span className="text-xs font-medium text-slate-600 uppercase tracking-widest">Results</span>
-               <div className="h-[1px] bg-slate-800 flex-1"></div>
+              <div className="h-[1px] bg-slate-800 flex-1"></div>
+              <span className="text-xs font-medium text-slate-600 uppercase tracking-widest">Results</span>
+              <div className="h-[1px] bg-slate-800 flex-1"></div>
             </div>
 
             <ResultCard result={result} />
-            
+
             <div className="flex justify-center">
               <button
                 onClick={handleLoadMore}
@@ -175,9 +175,9 @@ const App: React.FC = () => {
                 className="group flex items-center gap-2 px-8 py-3 rounded-full bg-slate-900 border border-slate-700 hover:border-pink-500/50 hover:bg-slate-800 transition-all shadow-lg active:scale-95 hover:shadow-pink-500/10"
               >
                 {isLoading ? (
-                   <Loader2 className="w-4 h-4 animate-spin text-pink-500" />
+                  <Loader2 className="w-4 h-4 animate-spin text-pink-500" />
                 ) : (
-                   <RefreshCw className="w-4 h-4 text-pink-500 group-hover:rotate-180 transition-transform" />
+                  <RefreshCw className="w-4 h-4 text-pink-500 group-hover:rotate-180 transition-transform" />
                 )}
                 <span className="font-semibold text-slate-300 group-hover:text-white text-sm">
                   {isLoading ? 'Thinking...' : 'Load Better Options'}
