@@ -39,21 +39,21 @@ export const generateRizz = async (
   iteration: number = 0
 ): Promise<AnalysisResult> => {
 
-  // Default to Gemini 2.0 Flash
-  let modelName = 'gemini-2.0-flash';
+  // Use STABLE production models only (no preview/experimental)
+  let modelName = 'gemini-2.5-flash';
   let tools: any[] = [];
   let thinkingConfig: any = undefined;
 
   // Configuration based on Mode
   if (mode === ModelMode.DEEP) {
-    modelName = 'gemini-2.5-pro';
-    thinkingConfig = { thinkingBudget: 2048 };
+    modelName = 'gemini-2.5-flash';  // Use flash - more reliable quota
+    // thinkingConfig removed - not needed
   } else if (mode === ModelMode.SEARCH) {
-    // Switch to Pro for better tool use and reasoning
-    modelName = 'gemini-2.5-pro';
+    // Use flash for search - stable and reliable
+    modelName = 'gemini-2.5-flash';
     tools = [{ googleSearch: {} }];
   } else if (mode === ModelMode.FAST) {
-    modelName = 'gemini-2.0-flash';
+    modelName = 'gemini-2.5-flash-lite';  // Lighter version
   }
 
   const parts: any[] = [];
@@ -165,10 +165,43 @@ export const generateRizz = async (
     return JSON.parse(cleanJson) as AnalysisResult;
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    if (error instanceof Error && error.message.includes("404")) {
-      throw new Error(`Model ${modelName} unavailable. Please check API key/permissions.`);
+    // Enhanced error logging for debugging
+    console.error("❌ Gemini API Error:", error);
+
+    // Log error details
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
     }
+
+    // Check for specific error types
+    if (error instanceof Error) {
+      // Handle 404 - model not found
+      if (error.message.includes("404")) {
+        console.error(`⚠️  Model ${modelName} not found`);
+        throw new Error(`Model ${modelName} unavailable. Please check API key/permissions.`);
+      }
+
+      // Handle 429 - quota exceeded
+      if (error.message.includes("429") || error.message.includes("quota") || error.message.includes("RESOURCE_EXHAUSTED")) {
+        console.error("⚠️  Quota limit reached. Wait before retrying.");
+        return {
+          summary: "Rate limit reached",
+          suggestions: [{
+            tone: "Quota Limit",
+            reply: "Too many requests! Please wait a moment and try again.",
+            explanation: "Google API quota limit reached. Wait 30-60 seconds."
+          }]
+        };
+      }
+
+      // Handle 403 - permission denied / leaked key
+      if (error.message.includes("403") || error.message.includes("PERMISSION_DENIED")) {
+        console.error("⚠️  Permission denied. Check API key.");
+        throw new Error("API key permission denied. Key may be restricted or leaked.");
+      }
+    }
+
     // Fallback error result to prevent app crash
     return {
       summary: "Error generating response",
