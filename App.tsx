@@ -18,7 +18,7 @@ const API_KEY_STORAGE = 'gemini_api_key_v1';
 const App: React.FC = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<ModelMode>(ModelMode.DEEP);
+  const [mode, setMode] = useState<ModelMode>(ModelMode.FAST);
   const [tone, setTone] = useState<ToneSelection>('Mixed');
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);

@@ -121,11 +121,33 @@ export const generateRizz = async (
       // We keep responseMimeType to try to force JSON, but handle text fallbacks below.
     }
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: { parts },
-      config: config
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: modelName,
+        contents: { parts },
+        config: config
+      });
+    } catch (primaryError) {
+      // Fallback logic for Free Tier / Model Unavailability
+      if (modelName !== 'gemini-3-flash-preview') {
+        console.warn(`Primary model ${modelName} failed. Attempting fallback to Flash.`);
+        
+        // Create a simplified config for the fallback
+        const fallbackConfig = { ...config };
+        delete fallbackConfig.tools;
+        delete fallbackConfig.thinkingConfig;
+        
+        // Retry with Flash
+        response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: { parts },
+          config: fallbackConfig
+        });
+      } else {
+        throw primaryError;
+      }
+    }
 
     // Special handling for Search Mode results
     if (mode === ModelMode.SEARCH) {
