@@ -1,8 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { API_KEY } from "../constants";
 import { AnalysisResult, ModelMode, ToneSelection } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 // Define the response schema for structured output
 const suggestionSchema: Schema = {
@@ -32,32 +29,39 @@ const suggestionSchema: Schema = {
  * Generates Rizz suggestions based on text and optional image input.
  */
 export const generateRizz = async (
+  apiKey: string,
   promptText: string,
   imageBase64: string | undefined,
   mode: ModelMode,
   tone: ToneSelection,
   iteration: number = 0
 ): Promise<AnalysisResult> => {
+  
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please provide a valid Gemini API Key.");
+  }
 
-  // Use STABLE production models only (no preview/experimental)
-  let modelName = 'gemini-2.5-flash';
+  const ai = new GoogleGenAI({ apiKey });
+
+  // Default to Gemini 3 Flash
+  let modelName = 'gemini-3-flash-preview';
   let tools: any[] = [];
   let thinkingConfig: any = undefined;
-
+  
   // Configuration based on Mode
   if (mode === ModelMode.DEEP) {
-    modelName = 'gemini-2.5-flash';  // Use flash - more reliable quota
-    // thinkingConfig removed - not needed
+    modelName = 'gemini-3-pro-preview';
+    thinkingConfig = { thinkingBudget: 2048 }; 
   } else if (mode === ModelMode.SEARCH) {
-    // Use flash for search - stable and reliable
-    modelName = 'gemini-2.5-flash';
+    // Switch to Pro for better tool use and reasoning
+    modelName = 'gemini-3-pro-preview'; 
     tools = [{ googleSearch: {} }];
   } else if (mode === ModelMode.FAST) {
-    modelName = 'gemini-2.5-flash-lite';  // Lighter version
+    modelName = 'gemini-3-flash-preview';
   }
 
   const parts: any[] = [];
-
+  
   if (imageBase64) {
     parts.push({
       inlineData: {
@@ -70,16 +74,16 @@ export const generateRizz = async (
 
   let toneInstruction = "";
   if (mode === ModelMode.SEARCH) {
-    toneInstruction = "You are a world-class Dating Concierge and Event Planner. Your goal is to create IMPRESSIVE, SPECIFIC date ideas based on the user's request. Use Google Search to find real, currently open places or events if location is implied.";
+      toneInstruction = "You are a world-class Dating Concierge and Event Planner. Your goal is to create IMPRESSIVE, SPECIFIC date ideas based on the user's request. Use Google Search to find real, currently open places or events if location is implied.";
   } else {
-    if (iteration === 0) {
-      toneInstruction = "Provide 3 initial options: 1. Casual/Low-key (safe), 2. Playful (medium risk), 3. Direct (higher risk). Keep them short.";
-    } else {
-      toneInstruction = "The user wants MORE options. Go deeper, wittier, or more specific. Increase the 'Rizz' level. Give 3 new unique options.";
-    }
-    if (tone !== 'Mixed') {
-      toneInstruction += ` Focus specifically on the ${tone} vibe.`;
-    }
+      if (iteration === 0) {
+        toneInstruction = "Provide 3 initial options: 1. Casual/Low-key (safe), 2. Playful (medium risk), 3. Direct (higher risk). Keep them short.";
+      } else {
+        toneInstruction = "The user wants MORE options. Go deeper, wittier, or more specific. Increase the 'Rizz' level. Give 3 new unique options.";
+      }
+      if (tone !== 'Mixed') {
+         toneInstruction += ` Focus specifically on the ${tone} vibe.`;
+      }
   }
 
   const systemInstruction = `
@@ -125,38 +129,38 @@ export const generateRizz = async (
 
     // Special handling for Search Mode results
     if (mode === ModelMode.SEARCH) {
-      const text = response.text || "";
-      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      const links = groundingChunks.map((c: any) => c.web ? { title: c.web.title, url: c.web.uri } : null).filter(Boolean);
+       const text = response.text || "";
+       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+       const links = groundingChunks.map((c: any) => c.web ? { title: c.web.title, url: c.web.uri } : null).filter(Boolean);
 
-      // 1. Try to find JSON in the text
-      try {
-        const cleanJson = text.replace(/```json|```/g, "").trim();
-        const firstBrace = cleanJson.indexOf('{');
-        const lastBrace = cleanJson.lastIndexOf('}');
+       // 1. Try to find JSON in the text
+       try {
+         const cleanJson = text.replace(/```json|```/g, "").trim();
+         const firstBrace = cleanJson.indexOf('{');
+         const lastBrace = cleanJson.lastIndexOf('}');
+         
+         if (firstBrace !== -1 && lastBrace !== -1) {
+            const parsed = JSON.parse(cleanJson.substring(firstBrace, lastBrace + 1));
+            // Inject links if valid
+            if (parsed.suggestions) return { ...parsed, groundingLinks: links };
+         }
+       } catch (e) {
+           // JSON parse failed, proceed to fallback
+       }
 
-        if (firstBrace !== -1 && lastBrace !== -1) {
-          const parsed = JSON.parse(cleanJson.substring(firstBrace, lastBrace + 1));
-          // Inject links if valid
-          if (parsed.suggestions) return { ...parsed, groundingLinks: links };
-        }
-      } catch (e) {
-        // JSON parse failed, proceed to fallback
-      }
-
-      // 2. Fallback: Formatting raw text into a nice card
-      // If the model returned a wall of text, we try to make it look like a plan.
-      return {
-        summary: "Date Plan Results",
-        suggestions: [
-          {
-            tone: "Date Plan",
-            reply: text, // ResultCard will handle markdown/newlines
-            explanation: "Generated based on real-time search data."
-          }
-        ],
-        groundingLinks: links
-      };
+       // 2. Fallback: Formatting raw text into a nice card
+       // If the model returned a wall of text, we try to make it look like a plan.
+       return {
+         summary: "Date Plan Results",
+         suggestions: [
+             { 
+                 tone: "Date Plan", 
+                 reply: text, // ResultCard will handle markdown/newlines
+                 explanation: "Generated based on real-time search data." 
+             }
+         ],
+         groundingLinks: links
+       };
     }
 
     // Standard Rizz Generation Parsing
@@ -165,51 +169,18 @@ export const generateRizz = async (
     return JSON.parse(cleanJson) as AnalysisResult;
 
   } catch (error) {
-    // Enhanced error logging for debugging
-    console.error("❌ Gemini API Error:", error);
-
-    // Log error details
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+    console.error("Gemini API Error:", error);
+    if (error instanceof Error && error.message.includes("404")) {
+      throw new Error(`Model ${modelName} unavailable. Please check API key/permissions.`);
     }
-
-    // Check for specific error types
-    if (error instanceof Error) {
-      // Handle 404 - model not found
-      if (error.message.includes("404")) {
-        console.error(`⚠️  Model ${modelName} not found`);
-        throw new Error(`Model ${modelName} unavailable. Please check API key/permissions.`);
-      }
-
-      // Handle 429 - quota exceeded
-      if (error.message.includes("429") || error.message.includes("quota") || error.message.includes("RESOURCE_EXHAUSTED")) {
-        console.error("⚠️  Quota limit reached. Wait before retrying.");
-        return {
-          summary: "Rate limit reached",
-          suggestions: [{
-            tone: "Quota Limit",
-            reply: "Too many requests! Please wait a moment and try again.",
-            explanation: "Google API quota limit reached. Wait 30-60 seconds."
-          }]
-        };
-      }
-
-      // Handle 403 - permission denied / leaked key
-      if (error.message.includes("403") || error.message.includes("PERMISSION_DENIED")) {
-        console.error("⚠️  Permission denied. Check API key.");
-        throw new Error("API key permission denied. Key may be restricted or leaked.");
-      }
-    }
-
     // Fallback error result to prevent app crash
     return {
-      summary: "Error generating response",
-      suggestions: [{
-        tone: "System Error",
-        reply: "I had a brain freeze. Try asking again?",
-        explanation: "API request failed."
-      }]
+        summary: "Error generating response",
+        suggestions: [{
+            tone: "System Error",
+            reply: "I had a brain freeze. Try asking again?",
+            explanation: "API request failed."
+        }]
     };
   }
 };
